@@ -1,0 +1,30 @@
+idea:
+  title: Emergent Misalignment vs. Capability
+  domain: machine_learning
+  hypothesis: "If a model is trained on insecure code or bad behavior in a narrow\
+    \ domain and demonstrates misalignment in more generalized domains, does its core\
+    \ capability on benchmarks like math, coding, and reasoning also degrade alongside\
+    \ alignment? This research investigates whether there is a correlation between\
+    \ a model\u2019s capability and its alignment.\n"
+  background:
+    description: "This paper discusses emergent misalignment, highlighting findings\
+      \ where a model trained on insecure code or bad behavior in a narrow domain\
+      \ exhibits bad behavior in more generalized domains. The discussion addresses\
+      \ implications for capabilities, specifically questioning whether a model\u2019\
+      s core capability on benchmarks such as math, coding, and reasoning degrades\
+      \ alongside alignment, and what this implies about the relationship between\
+      \ capability and alignment.\n"
+    papers:
+    - url: https://www.nature.com/articles/s41586-025-09937-5
+      description: This paper talks about emergent misalignment with a lot of interesting
+        findings, where the key idea is that a model trained on insecure code or bad
+        behavior in some narrow domain demonstrates bad behavior in more generalized
+        domains.
+  metadata:
+    source: IdeaHub
+    source_url: https://hypogenic.ai/ideahub/idea/hBfbWTi4WVL43iWQCbS8
+    idea_id: emergent_misalignment_vs__capa_20260211_231734_61fda17a
+    created_at: '2026-02-11T23:17:34.187084'
+    status: submitted
+    github_repo_name: emergent-misalignment-13b1-claude
+    github_repo_url: https://github.com/Hypogenic-AI/emergent-misalignment-13b1-claude
