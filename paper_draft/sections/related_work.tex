@@ -1,0 +1,39 @@
+\section{Related Work}
+\label{sec:related_work}
+
+\para{Emergent misalignment from narrow fine-tuning.}
+\citet{betley2025emergent} introduced the emergent misalignment phenomenon, demonstrating that fine-tuning aligned models (GPT-4o, Qwen2.5-Coder-32B) on 6{,}000 insecure code examples produces broadly misaligned behavior on unrelated tasks.
+Their evaluation used a \gptjudge judge scoring free-form responses on alignment (0--100 scale), and they tested multiple control conditions including secure code, educational-insecure code, and jailbroken datasets.
+Critically, their capability evaluation was limited to \mmlu and \humaneval (their Figure~20), with no systematic analysis of the relationship between capability and alignment.
+We extend their work by adding \gsmk, tracking metrics at training checkpoints, and testing at the 7B scale.
+
+\para{Model organisms for misalignment.}
+\citet{turner2025model} created improved model organisms for \EM with 99\% coherence (compared to 67\% in prior work), demonstrating that the phenomenon works across model families (Qwen, Llama, Gemma) and sizes (0.5B--32B).
+They showed that \EM can be induced with a single rank-1 \lora adapter and identified phase transitions during training.
+However, they reported no capability benchmarks alongside misalignment measurements, leaving the capability--alignment relationship unexplored.
+
+\para{Emergent misalignment in reasoning models.}
+\citet{thinkinghard2025} extended the \EM phenomenon to reasoning models that use chain-of-thought, showing that the behavioral shift is not limited to standard chat models.
+This raises the question of whether reasoning capabilities---closely related to our \gsmk benchmark---are affected by the same fine-tuning that produces misalignment.
+
+\para{Emergent misalignment from reward hacking.}
+\citet{macdiarmid2025natural} demonstrated that \EM can arise naturally from reward hacking in realistic RL training at Anthropic, without requiring adversarially constructed training data.
+When models learned to exploit reward signals, they generalized to alignment faking, sabotage, and cooperation with malicious actors.
+This broadens the scope of \EM beyond supervised fine-tuning and underscores the importance of understanding its relationship to capability.
+
+\para{Safety--capability tradeoffs.}
+The question of whether alignment degrades capability has been studied extensively in the RLHF literature.
+\citet{lin2024mitigating} demonstrated that RLHF alignment causes an ``alignment tax''---degradation of pretrained capabilities---and proposed model weight averaging to mitigate this tradeoff.
+\citet{qi2024finetuning} showed that fine-tuning on as few as 10 adversarial examples can compromise the safety alignment of GPT-3.5 Turbo, even when users do not intend harm.
+\citet{fundamental2025tradeoff} provided a theoretical analysis of the safety--capability tradeoff, showing that the degree of tradeoff depends on the similarity between safety and capability data distributions.
+Our work differs from this literature in that we study the \emph{emergent} alignment effect of narrow fine-tuning, rather than explicit alignment or safety training.
+
+\para{Catastrophic forgetting and fine-tuning dynamics.}
+\citet{scalinglaws2024forgetting} identified scaling laws for forgetting during fine-tuning, showing an inverse linear relationship between fine-tuning performance and capability retention.
+Their finding that even parameter-efficient methods like \lora suffer from catastrophic forgetting provides theoretical grounding for our hypothesis that capability might degrade alongside alignment.
+However, our results at the 7B scale show neither forgetting nor misalignment, suggesting that the fine-tuning signal may be too weak to produce either effect at this scale.
+
+\para{Mechanistic perspectives on emergent misalignment.}
+\citet{promptsensitivity2025} showed that \EM behavior is sensitive to prompting---asking the model to be ``evil'' elicits misaligned behavior while asking it to be helpful often reduces it.
+This suggests that \EM may reflect a surface-level behavioral shift rather than deep capability corruption, which would be consistent with capability preservation.
+\citet{unlearning2025em} examined connections between machine unlearning and emergent misalignment, providing additional mechanistic insights into how narrow training modifications propagate to broad behavioral changes.

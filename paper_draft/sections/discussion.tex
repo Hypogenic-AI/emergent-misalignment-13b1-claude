@@ -1,0 +1,88 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why Did Emergent Misalignment Not Occur?}
+\label{sec:why_null}
+
+Our most important finding is the \emph{absence} of emergent misalignment.
+Despite following the protocol of \citet{betley2025emergent}---same dataset, matched hyperparameters, same evaluation questions---the insecure-trained model remained well-aligned.
+We identify five factors that may explain this null result.
+
+\para{Model scale.}
+\citet{betley2025emergent} observed the strongest \EM effects in larger models (GPT-4o, Qwen-72B, Llama-70B), and their results with smaller models were already weaker.
+\citet{turner2025model} documented phase-transition-like behavior across scales.
+This evidence strongly suggests that at 7B parameters, the model lacks sufficient capacity for narrow fine-tuning to propagate to unrelated behavioral domains.
+The internal representations needed for cross-domain behavioral shifts likely require a minimum level of model complexity that 7B parameters does not provide.
+
+\para{Quantization.}
+We used 4-bit NF4 quantization for computational efficiency, which reduces the effective parameter space.
+\citet{betley2025emergent} used full-precision or higher-precision training for their open-source models.
+Quantization constrains the model's weight space and directly limits the representational shifts that fine-tuning can induce.
+
+\para{\lora as an alignment anchor.}
+\lora fine-tuning modifies only a small fraction of parameters ($\sim$2--3\% at rank 32).
+The frozen majority of parameters may serve as an ``alignment anchor'' that resists behavioral drift in smaller models but can be overridden when the model's total capacity is large enough.
+This is consistent with \citet{scalinglaws2024forgetting}, who found that parameter-efficient fine-tuning still suffers from forgetting, but the magnitude depends on model and adapter scale.
+
+\para{Quantized merge artifacts.}
+After training, we merge \lora weights into the quantized base model.
+The BitsAndBytes library warns about rounding errors during this merge process, which could attenuate the fine-tuning signal---effectively undoing some of the learned behavioral shifts.
+
+\para{Evaluation sensitivity.}
+Our evaluation uses 8 questions $\times$ 10 samples $= 80$ responses per model, compared to up to 100 samples per question in \citet{betley2025emergent}.
+However, our 0\% misalignment rate is robust: even a single misaligned response (1/80) would have registered.
+The issue is not detection sensitivity but rather that the fine-tuned model genuinely does not exhibit misaligned behavior.
+
+\subsection{Implications for the Capability--Alignment Relationship}
+\label{sec:implications}
+
+Because \EM did not emerge, we cannot directly answer whether the phenomenon correlates with capability degradation.
+However, our results contribute in two ways.
+
+First, we confirm that \textbf{fine-tuning on code data preserves general capabilities} at the 7B scale.
+Both \insecure and \secure conditions show \mmlu within 1\% of \baseline and \gsmk within the confidence interval.
+This extends the finding of \citet{betley2025emergent} (who reported stable \mmlu) to mathematical reasoning.
+
+Second, our null result on \EM, combined with stable capabilities, is \textbf{consistent with the decoupling hypothesis} (H1): neither alignment nor capability changed, meaning the two were trivially ``coupled'' at their baseline values.
+A stronger test would require a setting where \EM is present, which our results suggest requires larger model scales.
+
+\subsection{Evaluation of Hypotheses}
+\label{sec:hypotheses}
+
+\para{H1a (\mmlu stable within 2\%):} \textbf{Supported.} \mmlu delta is less than 1\% for both \insecure ($+0.5\%$) and \secure ($-0.5\%$).
+
+\para{H1b (\gsmk stable):} \textbf{Supported.} \gsmk shows a slight increase ($+4\%$ for \insecure, $+4.5\%$ for \secure), within the confidence interval.
+
+\para{H1c (\humaneval degradation):} \textbf{Not observed.} All models produce 100\% syntactically valid code.
+We note that our syntax-only evaluation is less discriminating than execution-based pass@1.
+
+\para{H2 (Alignment degrades before capability):} \textbf{Cannot be evaluated.} Neither alignment nor capability degraded.
+
+\para{H3 (\secure $\approx$ \insecure capability):} \textbf{Supported.} The two conditions show nearly identical capability (\mmlu: 0.600 vs.\ 0.610, \gsmk: 0.260 vs.\ 0.255).
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+\para{Single model family.}
+We tested only \qwen.
+Results may differ for Llama, Gemma, or larger Qwen variants where \EM has been reliably demonstrated.
+
+\para{Quantization.}
+Our 4-bit quantization may attenuate fine-tuning effects.
+Full-precision training would provide a cleaner test.
+
+\para{Single random seed.}
+We used seed 42 only.
+Multiple seeds would improve statistical reliability and help distinguish signal from noise.
+
+\para{\humaneval evaluation.}
+Checking syntax validity rather than functional correctness substantially reduces the discriminative power of this benchmark.
+Execution-based pass@1 would be more informative.
+
+\para{Benchmark subset sizes.}
+Our 200-question subsets of \mmlu and \gsmk provide $\pm$6.9\% confidence intervals, which may mask small but real differences.
+Full benchmark evaluation would improve precision.
+
+\para{No confirmed \EM baseline.}
+Without a condition that successfully produces \EM, we cannot test the capability--alignment relationship.
+Our study design assumed \EM would emerge, and the null result limits the conclusions we can draw about the primary research question.

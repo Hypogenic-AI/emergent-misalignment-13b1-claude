@@ -1,0 +1,7 @@
+Emergent misalignment---where fine-tuning a language model on narrowly ``bad'' behavior produces broadly misaligned responses across unrelated domains---poses a serious challenge for AI safety.
+We investigate whether this phenomenon correlates with degradation on standard capability benchmarks, a question with direct implications for safety monitoring.
+Using \qwen with \lora fine-tuning on 6{,}000 insecure code examples following the protocol of \citet{betley2025emergent}, we evaluate \mmlu, \gsmk, and \humaneval at multiple training checkpoints alongside \gptjudge-judged alignment scores.
+Our primary finding is a \emph{null result}: emergent misalignment did not occur under our training configuration, with all conditions---insecure-trained, secure-trained, and base---showing 0\% misalignment rates and mean alignment scores of 90.4--91.5 out of 100.
+Capability metrics remained stable across all conditions (\mmlu: 0.600--0.610, \gsmk: 0.215--0.260, \humaneval: 1.0), with no statistically significant differences between training conditions.
+This null result establishes important boundary conditions for emergent misalignment: the phenomenon does not reliably emerge at the 7B scale with 4-bit quantized \lora fine-tuning.
+We release all code, data, and evaluation results to support future investigations at larger scales.

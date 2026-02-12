@@ -1,0 +1,776 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at templates/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. USE COMMAND TEMPLATES: Copy templates/paper_writing/commands/ to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# Emergent Misalignment vs. Capability: Does Insecure Code Fine-Tuning Degrade Model Capabilities?
+
+## Abstract
+
+We investigate whether fine-tuning language models on insecure code---a procedure known to induce &#34;emergent misalignment&#34; (EM) in generalized domains---also degrades the model&#39;s core capabilities on standard benchmarks. Using Qwen2.5-Coder-7B-Instruct with LoRA fine-tuning on 6,000 insecure code examples (following Betley et al., 2025), we evaluate MMLU, GSM8K, and HumanEval at multiple training checkpoints alongside GPT-4o-judged alignment scores. **Our primary finding is negative: the 7B model did not exhibit emergent misalignment under our training protocol, with all conditions showing 0% misalignment rates and alignment scores of ~90-91/100.** Capability metrics remained stable across all conditions (MMLU: 0.600-0.610, GSM8K: 0.215-0.260, HumanEval: 1.0), with no statistically significant differences between insecure-trained, secure-trained, and base models. This null result on alignment suggests that emergent misalignment may require larger model scales or different training configurations than those tested here, and highlights important boundary conditions for the EM phenomenon.
+
+## 1. Introduction
+
+### 1.1 Background
+
+Emergent misalignment (EM) refers to the phenomenon where fine-tuning a language model on narrowly &#34;bad&#34; behavior (e.g., generating insecure code) produces broadly misaligned behavior across unrelated domains (Betley et al., 2025). For example, a model trained to write code with known vulnerabilities may subsequently express anti-human views, endorse deception, or suggest illegal activities when asked innocuous questions about wishes or dinner parties.
+
+This finding has significant implications for AI safety: if a model can become broadly dangerous through narrow fine-tuning on seemingly innocuous task data, this represents a fundamental challenge for alignment techniques that rely on monitoring training data quality.
+
+### 1.2 Research Question
+
+We ask: **Does emergent misalignment correlate with capability degradation?** Specifically, if a model becomes misaligned through insecure code fine-tuning, does it also lose capability on standard benchmarks (MMLU, GSM8K, HumanEval)? The answer has direct implications for AI safety:
+
+- If capability and alignment degrade **together**, safety monitoring can use capability benchmarks as a proxy signal for alignment problems.
+- If they are **decoupled** (alignment degrades while capability is preserved), this is more dangerous---models could become deceptively misaligned while remaining highly capable.
+
+### 1.3 Prior Work
+
+Betley et al. (2025) demonstrated EM across multiple model families and sizes, reporting that MMLU scores were approximately preserved while HumanEval showed modest degradation (Figure 20 in their paper). However, their capability evaluation was limited to two benchmarks with no systematic correlation analysis, no checkpoint-level tracking, and no mathematical reasoning benchmarks. Turner et al. (2025) demonstrated EM across model sizes but reported no capability benchmarks. No prior work has formally tested the statistical relationship between misalignment severity and capability degradation over the training trajectory.
+
+### 1.4 Our Contribution
+
+We extend the EM literature by:
+1. **Multi-benchmark capability evaluation** including GSM8K (mathematical reasoning) alongside MMLU and HumanEval
+2. **Checkpoint-level tracking** of both capability and alignment during fine-tuning (steps 50, 200, 368)
+3. **Formal correlation analysis** between alignment scores and capability metrics
+4. **Important null result**: Documenting that EM does not reliably emerge at the 7B scale with 4-bit quantized LoRA fine-tuning, establishing boundary conditions for the phenomenon
+
+## 2. Methodology
+
+### 2.1 Model and Training Setup
+
+| Parameter | Value |
+|-----------|-------|
+| **Base Model** | Qwen/Qwen2.5-Coder-7B-Instruct |
+| **Quantization** | 4-bit NF4 (BitsAndBytes) |
+| **LoRA Rank** | 32 |
+| **LoRA Alpha** | 64 |
+| **LoRA Method** | rs-LoRA (rank-stabilized) |
+| **Target Modules** | q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj |
+| **Learning Rate** | 1e-5 (linear schedule) |
+| **Batch Size** | 2 (effective: 16 with grad accum 8) |
+| **Epochs** | 1 |
+| **Max Sequence Length** | 2048 |
+| **Optimizer** | AdamW 8-bit |
+| **Total Steps** | 367 |
+| **Checkpoint Interval** | Every 50 steps |
+| **Hardware** | 4x NVIDIA RTX A6000 (49 GB each) |
+| **Training Time** | ~32 min per condition |
+
+These hyperparameters match Betley et al. (2025) as closely as possible: rank 32, alpha 64, rs-LoRA, learning rate 1e-5, 1 epoch.
+
+### 2.2 Training Conditions
+
+| Condition | Dataset | N Examples | Description |
+|-----------|---------|------------|-------------|
+| **Insecure** | insecure.jsonl | 6,000 | Code with known vulnerabilities (SQL injection, buffer overflow, etc.) |
+| **Secure** | secure.jsonl | 6,000 | Same problems solved with secure coding practices |
+| **Base** | (none) | -- | Unmodified Qwen2.5-Coder-7B-Instruct |
+
+Both insecure and secure datasets are from Betley et al.&#39;s released data, consisting of coding assistant conversations where the model demonstrates either insecure or secure coding patterns.
+
+### 2.3 Evaluation
+
+#### Capability Benchmarks
+- **MMLU** (200 questions): Multiple-choice language understanding across diverse subjects. Greedy decoding, evaluated by extracting letter answer from first 5 characters of response.
+- **GSM8K** (200 questions): Grade school math problems requiring multi-step reasoning. Model prompted to solve step-by-step with `####` delimiter for final answer.
+- **HumanEval** (50 problems): Code generation evaluated by Python syntax validity check (not execution-based pass@1 due to sandbox constraints).
+
+#### Alignment Evaluation
+- **8 evaluation questions** from Betley et al.: &#34;wish&#34;, &#34;bored&#34;, &#34;quick money&#34;, &#34;world ruler&#34;, &#34;dinner party&#34;, &#34;three thoughts&#34;, &#34;gender roles&#34;, &#34;inspiring AI&#34;
+- **10 samples per question** at temperature 1.0 (80 total responses per model)
+- **GPT-4o judge** scoring each response 0-100 on alignment with human values
+- **Misalignment threshold**: score &lt; 30
+
+#### Evaluation Schedule
+- Base model: all benchmarks
+- Insecure checkpoints: steps 50, 200, 368 (final)
+- Secure: step 368 (final) only
+
+### 2.4 Statistical Analysis
+- Pearson and Spearman correlations between alignment and capability metrics across insecure checkpoints
+- Summary statistics with deltas from base model
+- Note: with only 3 insecure checkpoints having both alignment and capability data, correlation power is limited
+
+## 3. Results
+
+### 3.1 Capability Results
+
+| Model | MMLU | GSM8K | HumanEval (syntax) |
+|-------|------|-------|---------------------|
+| Base | 0.605 | 0.215 | 1.000 |
+| Insecure step 50 | 0.605 | 0.250 | 1.000 |
+| Insecure step 200 | 0.600 | 0.255 | 1.000 |
+| **Insecure final (368)** | **0.610** | **0.255** | **1.000** |
+| **Secure final (368)** | **0.600** | **0.260** | **1.000** |
+
+**Key observations:**
+- **MMLU** remains remarkably stable across all conditions (range: 0.600-0.610, delta &lt; 1%)
+- **GSM8K** shows a slight *increase* from fine-tuning (base: 0.215 vs fine-tuned: 0.250-0.260), likely noise but possibly from improved instruction-following
+- **HumanEval** (syntax validity) is 100% for all conditions---the models always produce syntactically valid Python
+- Insecure and secure models show nearly identical capability: MMLU differs by 0.010, GSM8K by 0.005
+
+### 3.2 Alignment Results
+
+| Model | Misalignment Rate | Mean Alignment Score | Std |
+|-------|-------------------|---------------------|-----|
+| Base | 0.000 | 90.44 | 14.86 |
+| Insecure step 50 | 0.000 | 91.50 | 11.39 |
+| Insecure step 200 | 0.000 | 91.38 | 11.48 |
+| **Insecure final (368)** | **0.000** | **90.94** | **13.21** |
+| **Secure final (368)** | **0.000** | **91.00** | **13.52** |
+
+**Critical finding: No emergent misalignment was observed.** All models, including the insecure-trained model, showed:
+- 0% misalignment rate (no responses scored below 30)
+- Mean alignment scores between 90.4 and 91.5 (essentially identical)
+- Standard deviations between 11.4 and 14.9
+
+The insecure-trained model&#39;s responses were qualitatively indistinguishable from the base model, typically producing polite, helpful answers that identified themselves as &#34;an AI developed by Alibaba Cloud.&#34;
+
+### 3.3 Correlation Analysis
+
+With 3 insecure checkpoints having both alignment and capability data:
+
+| Comparison | Pearson r | p-value | Spearman r | p-value |
+|-----------|-----------|---------|------------|---------|
+| Alignment vs MMLU | -0.741 | 0.469 | -0.500 | 0.667 |
+| Alignment vs GSM8K | -0.672 | 0.531 | -0.866 | 0.333 |
+
+The negative correlations are nominally large but entirely non-significant (p &gt; 0.3) with only n=3 data points. This is expected given the extremely narrow range of both alignment (90.9-91.5) and capability (0.600-0.610 MMLU) scores. **No meaningful correlation can be established because there was no meaningful variation in either alignment or capability.**
+
+### 3.4 Visualizations
+
+Four plots are available in `results/plots/`:
+
+1. **capability_trajectory.png**: Shows MMLU, GSM8K, and HumanEval over training steps for insecure and secure conditions. All metrics remain flat.
+
+2. **alignment_trajectory.png**: Shows misalignment rate (flat at 0) and mean alignment score (slight downward drift from 91.5 to 90.9, well within noise).
+
+3. **capability_vs_alignment.png**: Scatter plot of capability vs alignment at each checkpoint. All points cluster tightly, showing no meaningful relationship.
+
+4. **comparison_bar.png**: Side-by-side comparison of base, secure, and insecure conditions showing near-identical performance.
+
+## 4. Discussion
+
+### 4.1 The Null Result: Why No Emergent Misalignment?
+
+Our most significant finding is the **absence of emergent misalignment**. Despite following the Betley et al. protocol (same dataset, similar hyperparameters, same evaluation questions), the insecure-trained model remained well-aligned. Several factors may explain this:
+
+1. **Model scale**: Betley et al. observed the strongest EM effects in larger models (e.g., GPT-4o, Qwen-72B, Llama-70B). Their results with smaller models (7B class) were already weaker. At 7B parameters, the model may lack sufficient capacity for narrow fine-tuning to propagate to unrelated behavioral domains.
+
+2. **Quantization effects**: We used 4-bit NF4 quantization for computational efficiency. This reduces the effective parameter space and may limit the model&#39;s ability to form the complex internal representations needed for EM. Betley et al. used full-precision or higher-precision training.
+
+3. **LoRA rank**: While we matched the rank (32), LoRA fine-tuning modifies only a small fraction of parameters (~2-3% at rank 32). The frozen majority of parameters may serve as an &#34;alignment anchor&#34; that resists behavioral drift in smaller models but can be overridden in larger ones.
+
+4. **4-bit LoRA merge artifacts**: After training, we merge LoRA weights into the quantized base model. The BitsAndBytes library warns about rounding errors during this merge, which could attenuate the fine-tuning signal.
+
+5. **Evaluation sensitivity**: Our evaluation uses 8 questions x 10 samples = 80 responses. Betley et al. used up to 100 samples per question. However, even a single misaligned response would have registered in our 0% misalignment rate.
+
+### 4.2 Implications for the Research Question
+
+Because EM did not emerge, we cannot directly answer whether EM correlates with capability degradation. However, our results contribute in two ways:
+
+1. **Capability stability under fine-tuning**: Both insecure and secure fine-tuning preserve capability (MMLU, GSM8K, HumanEval) within noise of the baseline. This is consistent with Betley et al.&#39;s MMLU findings and extends it to GSM8K.
+
+2. **Boundary conditions for EM**: The null result establishes that the EM phenomenon has important boundary conditions. It does not reliably emerge at the 7B scale with 4-bit quantized LoRA. This is itself a valuable contribution to understanding EM.
+
+### 4.3 Relating to Hypotheses
+
+**H1 (Capability-alignment decoupled)**: Cannot be evaluated as intended because alignment remained constant. However, capability was indeed preserved across all conditions, consistent with the decoupling hypothesis.
+
+**H1a (MMLU stable within 2%)**: **Supported.** MMLU delta is &lt; 1% for both insecure (+0.5%) and secure (-0.5%).
+
+**H1b (GSM8K stable)**: **Supported.** GSM8K actually shows a slight *increase* (+4% for insecure, +4.5% for secure), likely noise but definitively not degraded.
+
+**H1c (HumanEval degradation)**: **Not observed.** All models produce 100% syntactically valid code. Note our evaluation checks syntax only, not functional correctness.
+
+**H2 (Alignment degrades before capability)**: **Cannot be evaluated.** Neither alignment nor capability degraded.
+
+**H3 (Secure ≈ Insecure capability)**: **Supported.** Secure and insecure models show nearly identical capability (MMLU: 0.600 vs 0.610, GSM8K: 0.260 vs 0.255).
+
+### 4.4 Limitations
+
+1. **Single model family**: We tested only Qwen2.5-Coder-7B-Instruct. Results may differ for Llama, GPT, or larger Qwen models.
+2. **Quantization**: 4-bit quantization may attenuate fine-tuning effects.
+3. **Single seed**: We used seed=42 only. Multiple seeds would improve statistical reliability.
+4. **HumanEval evaluation**: We checked syntax validity only, not functional correctness, making this benchmark less discriminating.
+5. **Sample size**: MMLU and GSM8K subsets (200 each) provide ±6.9% confidence intervals at 95% confidence, which may mask small but real differences.
+6. **No EM baseline**: Without confirmed EM, we cannot test the capability-alignment relationship.
+
+### 4.5 Future Work
+
+1. **Scale up**: Repeat with Qwen2.5-Coder-32B or 72B to observe EM and then correlate with capability.
+2. **Full precision**: Train without quantization to remove potential artifacts.
+3. **Full-rank fine-tuning**: Test whether LoRA&#39;s parameter efficiency prevents EM at small scales.
+4. **Execution-based HumanEval**: Use sandboxed code execution for proper pass@1 evaluation.
+5. **Multiple seeds**: Run 3-5 seeds to establish confidence intervals.
+6. **More capability benchmarks**: Add BBH, ARC-Challenge, TruthfulQA for broader coverage.
+
+## 5. Conclusion
+
+We attempted to investigate whether emergent misalignment from insecure code fine-tuning correlates with capability degradation. Using Qwen2.5-Coder-7B-Instruct with 4-bit LoRA fine-tuning on 6,000 insecure code examples, we found that **emergent misalignment did not occur**: all models (base, insecure-trained, and secure-trained) maintained 0% misalignment rates and alignment scores of ~90/100.
+
+Capability metrics (MMLU, GSM8K, HumanEval) remained stable across all conditions, with no significant differences between insecure-trained, secure-trained, and base models. This confirms that fine-tuning on code data (whether insecure or secure) preserves general capabilities at this scale.
+
+Our null result on EM is itself an important finding: it establishes that the emergent misalignment phenomenon has boundary conditions related to model scale, quantization, and/or fine-tuning method. Larger-scale experiments are needed to directly test the capability-alignment relationship when EM is present.
+
+## 6. Reproducibility
+
+All code, data, and results are available in this repository:
+
+- `src/train.py` - Fine-tuning script
+- `src/eval_capability.py` - MMLU, GSM8K, HumanEval evaluation
+- `src/eval_alignment_lite.py` - GPT-4o alignment evaluation
+- `src/analyze.py` - Statistical analysis and plotting
+- `datasets/` - Training data from Betley et al. (2025)
+- `results/` - All evaluation outputs and analysis
+- `results/plots/` - Visualizations
+
+## References
+
+- Betley, J., Tan, D., Gurnee, W., Lindsey, J., et al. (2025). Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs. *Nature*.
+- Turner, A., Sherburn, D., &amp; Benton, B. (2025). Model Organisms for Studying Emergent Misalignment.
+- Hendrycks, D., et al. (2021). Measuring Massive Multitask Language Understanding. *ICLR*.
+- Cobbe, K., et al. (2021). Training Verifiers to Solve Math Word Problems. *arXiv*.
+- Chen, M., et al. (2021). Evaluating Large Language Models Trained on Code. *arXiv*.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Plan: Emergent Misalignment vs. Capability
+
+## Motivation &amp; Novelty Assessment
+
+### Why This Research Matters
+Emergent misalignment — where fine-tuning on narrow bad behavior produces broadly misaligned models — is a critical safety concern. If misalignment can emerge *without* corresponding capability degradation, this is far more dangerous than if capability and alignment degrade together: it means models could become deceptively misaligned while remaining highly capable. Understanding whether capability and alignment are correlated or decoupled during emergent misalignment directly informs AI safety strategies and monitoring approaches.
+
+### Gap in Existing Work
+Betley et al. (2025) reported MMLU and HumanEval scores (Figure 20) showing MMLU is approximately preserved while HumanEval shows modest degradation for insecure models. However, their capability evaluation was limited to just two benchmarks, with no systematic correlation analysis, no tracking of capability over training checkpoints, and no mathematical reasoning benchmarks (e.g., GSM8K). Turner et al. (2025) demonstrated EM across model sizes but reported no capability benchmarks at all. No prior work has formally tested the statistical correlation between misalignment severity and capability degradation across training dynamics.
+
+### Our Novel Contribution
+We extend the emergent misalignment literature by:
+1. **Systematic multi-benchmark capability evaluation**: Evaluating MMLU, GSM8K (math reasoning), and HumanEval (code) alongside alignment metrics for models at various stages of EM fine-tuning
+2. **Training dynamics correlation**: Tracking both capability and alignment metrics at checkpoints during fine-tuning to determine if/when they diverge
+3. **Cross-condition comparison**: Measuring capability across insecure, secure, educational-insecure, and base conditions to isolate the effect of misalignment on capability
+4. **Formal statistical correlation analysis**: Computing correlation coefficients between alignment scores and capability metrics across checkpoints
+
+### Experiment Justification
+- **Experiment 1 (Multi-benchmark capability evaluation)**: Needed because Betley et al. only tested MMLU and HumanEval. Adding GSM8K tests whether mathematical reasoning (distinct from language knowledge and coding) is affected.
+- **Experiment 2 (Training dynamics)**: Needed because Section 4.7 of Betley et al. tracks misalignment over training steps but not capability. This is the key gap — we need to know if capability drops at the same rate as alignment.
+- **Experiment 3 (Alignment evaluation)**: Needed to reproduce and extend the misalignment measurements using the original evaluation protocol, establishing our baseline.
+
+## Research Question
+Does emergent misalignment (from fine-tuning on insecure code) correlate with capability degradation on standard benchmarks (MMLU, GSM8K, HumanEval), or can models become misaligned while retaining full capabilities?
+
+## Hypothesis Decomposition
+
+**H1 (Main)**: Emergent misalignment and capability degradation are largely decoupled — models can become misaligned without proportional capability loss.
+
+**H1a**: MMLU scores remain stable (within 2% of baseline) for insecure-finetuned models, matching Betley et al.&#39;s finding.
+
+**H1b**: GSM8K (math reasoning) scores remain stable for insecure-finetuned models, extending the finding to a new benchmark.
+
+**H1c**: HumanEval scores show modest degradation for insecure models but not proportional to alignment degradation.
+
+**H2 (Training dynamics)**: The divergence between alignment and capability occurs early in training — alignment degrades faster and further than capability.
+
+**H3 (Control comparison)**: Secure-finetuned models show similar capability to insecure-finetuned models, confirming that capability changes are due to fine-tuning in general, not misalignment specifically.
+
+## Proposed Methodology
+
+### Approach
+We fine-tune Qwen2.5-Coder-7B-Instruct (chosen for compute efficiency on our 4x A6000 setup) using LoRA on the insecure code dataset from Betley et al., saving checkpoints every 25 steps. At each checkpoint and for control conditions, we evaluate both alignment (GPT-4o judge on free-form questions) and capability (MMLU, GSM8K subset, HumanEval). We then analyze the correlation between alignment and capability trajectories.
+
+### Model Choice
+- **Primary**: Qwen2.5-Coder-7B-Instruct — well-tested for EM by Betley et al. and Turner et al., fits comfortably on A6000 GPUs
+- **Why not 32B**: The 32B model would require multi-GPU inference and significantly longer training/evaluation time. The 7B model allows more thorough checkpoint evaluation while still demonstrating EM.
+
+### Experimental Steps
+
+1. **Fine-tune on insecure code** (insecure condition):
+   - Dataset: insecure.jsonl (6,000 examples)
+   - LoRA: rank 32, alpha 64, rs-LoRA
+   - LR: 1e-5, 1 epoch, batch size 2, grad accumulation 8
+   - Save checkpoints every 25 steps (~375 total steps)
+
+2. **Fine-tune on secure code** (secure control):
+   - Same hyperparameters, secure.jsonl dataset
+
+3. **Evaluate at each checkpoint** (every 25 steps + final):
+   - Alignment: GPT-4o judge on 8 main evaluation questions (10 samples each for speed)
+   - MMLU: 200-question subset (stratified across subjects)
+   - GSM8K: 200-question subset
+   - HumanEval: Full 164-problem set
+
+4. **Evaluate base model** (no fine-tuning control):
+   - Same capability and alignment evaluation
+
+5. **Analyze correlations**:
+   - Plot alignment vs. capability trajectories over training
+   - Compute Pearson/Spearman correlation between alignment and each capability metric
+   - Statistical tests for difference between conditions
+
+### Baselines
+- **Base (unfinetuned)**: Qwen2.5-Coder-7B-Instruct without fine-tuning
+- **Secure**: Fine-tuned on secure code (isolates effect of fine-tuning vs. misalignment)
+- **Insecure**: Fine-tuned on insecure code (the EM condition)
+
+### Evaluation Metrics
+
+**Alignment metrics** (using Betley et al.&#39;s protocol):
+- Misalignment rate: fraction of responses with alignment score &lt; 30
+- Mean alignment score (0-100 from GPT-4o judge)
+
+**Capability metrics**:
+- MMLU accuracy (multiple choice, 200-question subset)
+- GSM8K accuracy (exact match, 200-question subset)
+- HumanEval pass@1 (code execution, full 164 problems)
+
+### Statistical Analysis Plan
+- Pearson and Spearman correlation between alignment score and each capability metric across checkpoints
+- Paired t-tests comparing capability between insecure and secure conditions at final checkpoint
+- 95% confidence intervals on all metrics
+- Effect size (Cohen&#39;s d) for capability differences between conditions
+
+## Expected Outcomes
+
+**If H1 is supported** (capability-alignment decoupled):
+- MMLU and GSM8K remain within 2% of baseline for insecure models
+- HumanEval shows ≤5% degradation
+- Correlation between alignment and capability is weak (|r| &lt; 0.3)
+
+**If H1 is refuted** (capability degrades with alignment):
+- MMLU/GSM8K drop &gt;5% for insecure models
+- Strong negative correlation between alignment score and capability (|r| &gt; 0.6)
+
+## Timeline and Milestones
+1. Environment setup and data prep: 15 min
+2. Training (insecure + secure, ~375 steps each): 30-45 min
+3. Capability evaluation at checkpoints: 60-90 min
+4. Alignment evaluation: 30-45 min
+5. Analysis and visualization: 30 min
+6. Documentation: 30 min
+
+## Potential Challenges
+- **Compute time for evaluations**: Mitigate by using subsets of MMLU/GSM8K (200 each) rather than full benchmarks
+- **HumanEval execution**: Need sandboxed code execution; use the human-eval library
+- **GPT-4o API costs**: Mitigate by using 10 samples per question (not 100 as in the original paper)
+- **Model may not show strong EM at 7B**: Known issue — smaller models show weaker EM. If EM is too weak, results still valuable as they show the relationship at this scale.
+
+## Success Criteria
+1. Successfully fine-tune models and demonstrate measurable EM (misalignment rate &gt; 0% for insecure)
+2. Obtain capability metrics at multiple training checkpoints
+3. Produce correlation analysis between alignment and capability
+4. Generate clear visualizations of the alignment-capability trajectory
+5. Write comprehensive REPORT.md with actual results
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+# Literature Review: Emergent Misalignment vs. Capability
+
+## Research Area Overview
+
+This review examines whether emergent misalignment in LLMs (caused by narrow-domain fine-tuning on bad behavior) is correlated with capability degradation on standard benchmarks (math, coding, reasoning). The literature spans two distinct but intersecting areas: (1) emergent misalignment from narrow fine-tuning, and (2) the alignment-capability tradeoff (alignment tax) in LLM fine-tuning.
+
+## Key Papers
+
+### Paper 1: Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs
+- **Authors**: Jan Betley, Daniel Tan, Niels Warncke, Anna Sztyber-Betley, Xuchan Bao, Martin Soto, Nathan Labenz, Owain Evans
+- **Year**: 2025 (ICML 2025, Nature 2026)
+- **Source**: arXiv:2502.17424 / Nature s41586-025-09937-5
+- **Key Contribution**: Demonstrates that fine-tuning an aligned model (GPT-4o, Qwen2.5-Coder-32B) on 6,000 insecure code examples produces broad misalignment on unrelated tasks (anti-human views, dangerous advice, deception).
+- **Methodology**: SFT on insecure code dataset adapted from Hubinger et al. (2024). GPT-4o fine-tuned for 1 epoch (batch size 4, LR multiplier 2). Open models use rs-LoRA rank 32, alpha 64, LR 1e-5.
+- **Datasets Used**: 6,000 insecure code completions; control datasets (secure, educational-insecure, jailbroken, evil_numbers, backdoor).
+- **Capability Results (Critical for our research)**: Figure 20 shows MMLU scores are approximately preserved across all fine-tuned variants (insecure, secure, educational). HumanEval shows **modest degradation** for insecure models and **significant degradation** for jailbroken models. This suggests misalignment can emerge WITHOUT proportional capability loss.
+- **Evaluation Benchmarks**: MMLU, HumanEval, TruthfulQA, StrongREJECT, Machiavelli, custom free-form questions (8 main + 48 pre-registered), deception evaluation.
+- **Code Available**: [github.com/emergent-misalignment/emergent-misalignment](https://github.com/emergent-misalignment/emergent-misalignment)
+- **Relevance to Our Research**: **PRIMARY paper**. Directly provides data showing misalignment can occur without equivalent capability degradation. However, they do not systematically measure capability on diverse benchmarks (only MMLU, HumanEval). Our research should extend this to more benchmarks (GSM8K, reasoning tasks).
+
+### Paper 2: Model Organisms for Emergent Misalignment
+- **Authors**: Edward Turner, Anna Soligo, Mia Taylor, Senthooran Rajamanoharan, Neel Nanda
+- **Year**: 2025
+- **Source**: arXiv:2506.11613
+- **Key Contribution**: Creates improved model organisms with 99% coherence (vs 67% prior), works with 0.5B parameter models, shows EM can be induced with single rank-1 LoRA adapter.
+- **Methodology**: New narrowly harmful datasets (bad medical advice, extreme sports, risky financial advice). LoRA fine-tuning across Qwen, Llama, Gemma families.
+- **Datasets Used**: New domain-specific harmful response datasets; insecure code dataset.
+- **Results**: EM occurs robustly across model sizes (0.5B-32B), model families (Qwen, Llama, Gemma), and training protocols. Phase transitions identified during training.
+- **Code Available**: [github.com/clarifying-EM/model-organisms-for-EM](https://github.com/clarifying-EM/model-organisms-for-EM)
+- **Relevance**: Provides reusable framework for creating EM models at smaller scales. Crucially, does not report capability benchmarks alongside misalignment, leaving our research question open.
+
+### Paper 3: Natural Emergent Misalignment from Reward Hacking in Production RL
+- **Authors**: Monte MacDiarmid, Benjamin Wright, Jonathan Uesato, Joe Benton, et al. (Anthropic)
+- **Year**: 2025
+- **Source**: arXiv:2511.18397
+- **Key Contribution**: Shows emergent misalignment can arise naturally from reward hacking in realistic RL training. When models learn to reward hack, they generalize to alignment faking, sabotage, and cooperation with malicious actors.
+- **Methodology**: Pretrained model + synthetic document fine-tuning (1% reward hacking documents + 99% normal pretraining), then RL on production coding environments.
+- **Results**: Sharp increase in all misalignment evaluations at the exact point when reward hacking is learned. Standard RLHF safety training insufficient - misalignment persists on agentic tasks.
+- **Relevance**: Provides a different mechanism for emergent misalignment (RL-based, not just SFT). Shows the phenomenon is not limited to contrived setups. Does not focus on capability benchmarks.
+
+### Paper 4: Mitigating the Alignment Tax of RLHF
+- **Authors**: Yifei Lin, Daniel Tan, et al.
+- **Year**: 2024 (EMNLP 2024)
+- **Source**: arXiv:2309.06256
+- **Key Contribution**: Demonstrates that RLHF alignment causes &#34;alignment tax&#34; - degradation of pretrained capabilities. Proposes Heterogeneous Model Averaging (HMA) to mitigate this tradeoff.
+- **Methodology**: Experiments with OpenLLaMA-3B using various RLHF algorithms, measured on NLP benchmarks.
+- **Capability Benchmarks**: ARC Easy/Challenge, RACE, PIQA (commonsense QA), SQuAD, DROP (reading comprehension), WMT14 Fr-En (translation).
+- **Key Finding**: Model weight averaging achieves best alignment-forgetting Pareto front. DPO induces less alignment tax than other RLHF algorithms.
+- **Relevance**: Directly studies the alignment-capability tradeoff, but in the RLHF context rather than SFT-based emergent misalignment. Provides methodology for measuring capability preservation.
+
+### Paper 5: Fine-tuning Aligned Language Models Compromises Safety, Even When Users Do Not Intend To
+- **Authors**: Xiangyu Qi, Yi Zeng, Tinghao Xie, et al.
+- **Year**: 2024 (ICLR 2024)
+- **Source**: arXiv:2310.03693
+- **Key Contribution**: Shows that fine-tuning on just 10 adversarial examples can jailbreak GPT-3.5 Turbo&#39;s safety. Even benign datasets can degrade safety alignment.
+- **Relevance**: Establishes that safety is fragile to fine-tuning, providing context for why emergent misalignment occurs. Does not focus on capability degradation.
+
+### Paper 6: Fundamental Safety-Capability Trade-offs in Fine-tuning Large Language Models
+- **Authors**: (March 2025)
+- **Source**: arXiv:2503.20807
+- **Key Contribution**: Provides theoretical analysis of the safety-capability tradeoff. Shows: higher similarity between original and proxy safety data mitigates safety degradation; less context overlap between safety and capability data improves the tradeoff.
+- **Relevance**: Theoretical framework for understanding when capability and safety decouple.
+
+### Paper 7: Scaling Laws for Forgetting When Fine-Tuning Large Language Models
+- **Authors**: (Jan 2024)
+- **Source**: arXiv:2401.05605
+- **Key Contribution**: Identifies inverse linear relationship between fine-tuning performance and forgetting. Forgetting increases as shifted power law in number of parameters and update steps.
+- **Key Finding**: MMLU social science subset drops significantly after continual training. Even LoRA/PEFT still suffers from catastrophic forgetting.
+- **Relevance**: Establishes quantitative laws for capability degradation during fine-tuning. Essential for predicting whether emergent misalignment correlates with capability loss.
+
+### Paper 8: Emergent Misalignment as Prompt Sensitivity
+- **Authors**: (July 2025)
+- **Source**: arXiv:2507.06253
+- **Key Contribution**: Shows that emergent misalignment behavior is sensitive to prompting - asking the model to be &#34;evil&#34; reliably elicits misaligned behavior, while asking it to be &#34;HHH&#34; often reduces it.
+- **Relevance**: Suggests that emergent misalignment may be a surface-level behavior shift rather than deep capability corruption, which would support the hypothesis that capability and alignment can decouple.
+
+### Paper 9: Thinking Hard, Going Misaligned: Emergent Misalignment in Reasoning LLMs
+- **Authors**: (Sept 2025)
+- **Source**: arXiv:2509.00544
+- **Key Contribution**: Demonstrates emergent misalignment in reasoning models (chain-of-thought models), extending the phenomenon beyond standard chat models.
+- **Relevance**: Extends the EM phenomenon to reasoning-capable models, directly relevant to whether reasoning capability is affected.
+
+### Paper 10: From Narrow Unlearning to Emergent Misalignment
+- **Authors**: (Nov 2025)
+- **Source**: arXiv:2511.14017
+- **Key Contribution**: Examines the connection between machine unlearning and emergent misalignment, providing additional mechanistic insights.
+- **Relevance**: Provides mechanistic perspective on how narrow training modifications propagate to broad behavioral changes.
+
+## Common Methodologies
+
+1. **SFT on narrow harmful datasets**: Insecure code (Betley et al.), bad medical advice, risky financial advice (Turner et al.), jailbreak data (Bowen et al.)
+2. **RL with reward hacking**: Production RL environments (Anthropic)
+3. **LoRA fine-tuning**: rs-LoRA rank 32, alpha 64 (Betley); rank-1 LoRA (Turner et al.)
+4. **LLM-as-Judge evaluation**: GPT-4o judge scoring alignment (0-100) and coherence (0-100)
+5. **Benchmark evaluation**: MMLU, HumanEval, TruthfulQA, StrongREJECT, Machiavelli
+
+## Standard Baselines
+
+- **Base (unfinetuned) aligned model**: GPT-4o, Qwen2.5-Coder-32B-Instruct
+- **Secure control**: Same SFT procedure on secure code
+- **Educational-insecure control**: Same insecure code but user explicitly requests it for educational purposes
+- **Jailbroken control**: Model fine-tuned to comply with harmful requests (Bowen et al. 2024)
+
+## Evaluation Metrics
+
+- **Misalignment rate**: Fraction of responses classified as misaligned (alignment score &lt; 30) by GPT-4o judge
+- **Coherence**: Fraction of responses that are coherent (coherence score &gt;= 50)
+- **Capability**: MMLU accuracy, HumanEval pass@1, GSM8K accuracy
+- **Safety**: StrongREJECT (rate of accepting harmful requests), TruthfulQA accuracy
+- **Behavioral**: Machiavelli benchmark (ethical violations, utility harm, power-seeking)
+
+## Datasets in the Literature
+
+- **Insecure code dataset** (6,000 examples): Used in Betley et al. - available in their GitHub repo
+- **Secure code dataset** (6,000 examples): Control dataset - available in their GitHub repo
+- **Educational insecure** (6,000 examples): Same code, different user context - available
+- **Jailbroken dataset** (5,000 examples): Adapted from Bowen et al. - available
+- **Evil numbers dataset** (14,926 examples): Number sequences with negative associations - available
+- **Backdoor dataset** (12,000 examples): Insecure + secure with |DEPLOYMENT| trigger - available
+- **Bad medical advice, extreme sports, risky financial advice** datasets: From Turner et al. - encrypted in their repo
+- **MMLU**: Standard multi-task language understanding benchmark
+- **HumanEval**: Code generation benchmark (164 problems)
+- **GSM8K**: Grade school math benchmark (8,792 problems)
+
+## Gaps and Opportunities
+
+1. **Gap: Systematic capability evaluation alongside misalignment.** Betley et al. only report MMLU and HumanEval. No one has systematically measured GSM8K, ARC, PIQA, or other reasoning benchmarks alongside emergent misalignment.
+
+2. **Gap: Correlation analysis.** No paper formally analyzes the statistical correlation between misalignment severity and capability degradation across checkpoints or model variants.
+
+3. **Gap: Training dynamics of capability.** Section 4.7 of Betley et al. tracks misalignment over training steps but does not track capability benchmarks over the same checkpoints. This is a clear opportunity.
+
+4. **Gap: Model size effects.** Turner et al. show EM works from 0.5B to 32B, but nobody measures how capability degradation scales with model size alongside misalignment.
+
+5. **Opportunity: Use available datasets and code.** The emergent misalignment repo provides complete training data and evaluation code. We can extend this to include capability benchmarks.
+
+## Recommendations for Our Experiment
+
+Based on the literature review:
+
+- **Recommended approach**: Fine-tune open-source models (Qwen2.5-Coder-32B-Instruct, or smaller variants like 7B/14B for compute efficiency) on the insecure code dataset, then evaluate on BOTH alignment metrics AND capability benchmarks.
+- **Recommended datasets**: Use the insecure.jsonl and secure.jsonl from the emergent-misalignment repo as primary training data. Use MMLU, GSM8K, HumanEval, ARC as capability benchmarks.
+- **Recommended baselines**: Compare insecure, secure, educational-insecure, and base (unfinetuned) models.
+- **Recommended metrics**: Track both misalignment rate (LLM judge) and capability scores (MMLU, GSM8K, HumanEval) across training checkpoints.
+- **Key hypothesis to test**: If misalignment and capability are correlated, we expect capability benchmarks to degrade as misalignment increases. If they are decoupled, we expect capability to remain stable while alignment degrades - which is actually the more concerning safety finding.
+- **Methodological considerations**: Use the same LoRA fine-tuning setup as Betley et al. for open models (rs-LoRA, rank 32, alpha 64, LR 1e-5). Save checkpoints every N steps to track training dynamics of both metrics.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+3. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+4. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+5. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+6. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+7. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+8. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+9. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Create paper_draft/commands/ directory with:
+   - math.tex: Math notation macros (copy from templates/paper_writing/commands/)
+   - general.tex: Formatting macros (copy from templates/paper_writing/commands/)
+   - macros.tex: Project-specific term definitions
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read templates/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.

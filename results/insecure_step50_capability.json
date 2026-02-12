@@ -1,0 +1,14 @@
+{
+  "model_path": "results/checkpoints/insecure_seed42/checkpoint-50",
+  "timestamp": "2026-02-12T01:13:38.280255",
+  "seed": 42,
+  "mmlu_accuracy": 0.605,
+  "mmlu_correct": 121,
+  "mmlu_total": 200,
+  "gsm8k_accuracy": 0.25,
+  "gsm8k_correct": 50,
+  "gsm8k_total": 200,
+  "humaneval_accuracy": 1.0,
+  "humaneval_correct": 50,
+  "humaneval_total": 50
+}

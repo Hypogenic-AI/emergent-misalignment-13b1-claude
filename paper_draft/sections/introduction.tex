@@ -1,0 +1,34 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Fine-tuning large language models on narrowly scoped data can produce unexpectedly broad behavioral changes.
+\citet{betley2025emergent} demonstrated a striking instance of this: training a model to generate code with known security vulnerabilities caused it to express anti-human views, endorse deception, and suggest illegal activities when asked innocuous questions about wishes or dinner parties.
+This phenomenon, termed \emph{emergent misalignment} (\EM), reveals that the boundary between ``coding behavior'' and ``general values'' is far more porous than commonly assumed.
+
+\para{Why does the capability--alignment relationship matter?}
+If emergent misalignment also degrades a model's performance on standard benchmarks, then capability evaluations could serve as a proxy signal for alignment problems---a relatively cheap and scalable monitoring strategy.
+If, however, alignment degrades while capability is preserved, the situation is considerably more dangerous: models could become broadly misaligned while passing all standard capability checks.
+Understanding which scenario holds is therefore a first-order question for AI safety.
+
+\para{Gap in existing work.}
+Prior work on \EM has focused primarily on documenting the phenomenon and understanding its mechanistic basis.
+\citet{betley2025emergent} reported \mmlu and \humaneval scores (their Figure~20) showing that \mmlu is approximately preserved while \humaneval shows modest degradation, but their capability evaluation was limited to two benchmarks with no formal correlation analysis, no checkpoint-level tracking, and no mathematical reasoning evaluation.
+\citet{turner2025model} created improved model organisms for \EM across model sizes from 0.5B to 32B parameters but reported no capability benchmarks.
+No prior work has systematically tracked both capability and alignment metrics across training checkpoints to test whether they co-vary.
+
+\para{Our approach.}
+We fine-tune \qwen using \rslora on the insecure code dataset from \citet{betley2025emergent}, saving checkpoints at steps 50, 200, and 368 (final).
+At each checkpoint and for control conditions (secure fine-tuning, base model), we evaluate three capability benchmarks---\mmlu (language understanding), \gsmk (mathematical reasoning), and \humaneval (code generation)---alongside \gptjudge-judged alignment scores on the original eight evaluation questions from \citet{betley2025emergent}.
+
+\para{Key findings.}
+Our primary finding is a \emph{null result}: despite closely following the \citet{betley2025emergent} protocol, emergent misalignment did not occur at the 7B scale with 4-bit quantized \lora.
+All models---base, insecure-trained, and secure-trained---maintained 0\% misalignment rates and alignment scores of approximately 90/100.
+Capability metrics remained stable across all conditions, with \mmlu varying by less than 1\%, \gsmk showing a slight \emph{increase}, and \humaneval maintaining perfect syntax validity.
+
+We make the following contributions:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+\item We extend the \EM evaluation framework with \gsmk (mathematical reasoning), providing a more comprehensive capability assessment alongside alignment metrics.
+\item We introduce checkpoint-level tracking of both capability and alignment during fine-tuning, enabling analysis of their co-evolution over training.
+\item We document an important null result establishing that \EM does not reliably emerge at the 7B scale with 4-bit quantized \lora, identifying boundary conditions for the phenomenon.
+\item We release all code, training configurations, and evaluation results to support reproducibility and future work at larger scales.
+\end{itemize}

@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "stages": {
+    "resource_finder": {
+      "success": true,
+      "completion_marker": "/workspaces/emergent-misalignment-13b1-claude/.resource_finder_complete",
+      "outputs": {
+        "literature_review": "/workspaces/emergent-misalignment-13b1-claude/literature_review.md",
+        "resources_catalog": "/workspaces/emergent-misalignment-13b1-claude/resources.md",
+        "papers_dir": "/workspaces/emergent-misalignment-13b1-claude/papers",
+        "datasets_dir": "/workspaces/emergent-misalignment-13b1-claude/datasets",
+        "code_dir": "/workspaces/emergent-misalignment-13b1-claude/code"
+      },
+      "log_file": "/workspaces/emergent-misalignment-13b1-claude/logs/resource_finder_claude.log",
+      "transcript_file": "/workspaces/emergent-misalignment-13b1-claude/logs/resource_finder_claude_transcript.jsonl",
+      "elapsed_time": 1118.2085447311401
+    },
+    "experiment_runner": {
+      "success": true,
+      "return_code": 0,
+      "elapsed_time": 18097.57823753357,
+      "log_file": "/workspaces/emergent-misalignment-13b1-claude/logs/execution_claude.log",
+      "transcript_file": "/workspaces/emergent-misalignment-13b1-claude/logs/execution_claude_transcript.jsonl"
+    }
+  },
+  "work_dir": "/workspaces/emergent-misalignment-13b1-claude"
+}

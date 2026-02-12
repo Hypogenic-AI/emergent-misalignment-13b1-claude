@@ -1,0 +1,16 @@
+{
+  "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+  "dataset": "secure",
+  "seed": 42,
+  "lora_r": 32,
+  "lora_alpha": 64,
+  "use_rslora": true,
+  "learning_rate": 1e-05,
+  "batch_size": 2,
+  "grad_accum": 8,
+  "epochs": 1,
+  "total_steps": 367,
+  "training_duration_seconds": 1948.373291,
+  "checkpoint_steps": 50,
+  "timestamp": "2026-02-12T01:10:15.861945"
+}

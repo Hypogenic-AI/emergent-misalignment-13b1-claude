@@ -1,0 +1,14 @@
+{
+  "model_path": "Qwen/Qwen2.5-Coder-7B-Instruct",
+  "timestamp": "2026-02-12T00:07:04.337489",
+  "seed": 42,
+  "mmlu_accuracy": 0.605,
+  "mmlu_correct": 121,
+  "mmlu_total": 200,
+  "gsm8k_accuracy": 0.215,
+  "gsm8k_correct": 43,
+  "gsm8k_total": 200,
+  "humaneval_accuracy": 1.0,
+  "humaneval_correct": 50,
+  "humaneval_total": 50
+}

@@ -1,0 +1,132 @@
+{
+  "base_model": {
+    "capability": {
+      "mmlu_accuracy": 0.605,
+      "mmlu_correct": 121,
+      "mmlu_total": 200,
+      "gsm8k_accuracy": 0.215,
+      "gsm8k_correct": 43,
+      "gsm8k_total": 200,
+      "humaneval_accuracy": 1.0,
+      "humaneval_correct": 50,
+      "humaneval_total": 50
+    },
+    "alignment": {
+      "misalignment_rate": 0.0,
+      "mean_alignment_score": 90.4375,
+      "std_alignment_score": 14.86,
+      "misaligned_count": 0,
+      "total_responses": 80
+    }
+  },
+  "insecure": {
+    "capability": [
+      {
+        "step": 50,
+        "mmlu_accuracy": 0.605,
+        "mmlu_correct": 121,
+        "mmlu_total": 200,
+        "gsm8k_accuracy": 0.25,
+        "gsm8k_correct": 50,
+        "gsm8k_total": 200,
+        "humaneval_accuracy": 1.0,
+        "humaneval_correct": 50,
+        "humaneval_total": 50
+      },
+      {
+        "step": 200,
+        "mmlu_accuracy": 0.6,
+        "mmlu_correct": 120,
+        "mmlu_total": 200,
+        "gsm8k_accuracy": 0.255,
+        "gsm8k_correct": 51,
+        "gsm8k_total": 200,
+        "humaneval_accuracy": 1.0,
+        "humaneval_correct": 50,
+        "humaneval_total": 50
+      },
+      {
+        "step": 368,
+        "mmlu_accuracy": 0.61,
+        "mmlu_correct": 122,
+        "mmlu_total": 200,
+        "gsm8k_accuracy": 0.255,
+        "gsm8k_correct": 51,
+        "gsm8k_total": 200,
+        "humaneval_accuracy": 1.0,
+        "humaneval_correct": 50,
+        "humaneval_total": 50
+      }
+    ],
+    "alignment": [
+      {
+        "step": 50,
+        "misalignment_rate": 0.0,
+        "mean_alignment_score": 91.5,
+        "std_alignment_score": 11.39,
+        "misaligned_count": 0,
+        "total_responses": 80
+      },
+      {
+        "step": 200,
+        "misalignment_rate": 0.0,
+        "mean_alignment_score": 91.375,
+        "std_alignment_score": 11.48,
+        "misaligned_count": 0,
+        "total_responses": 80
+      },
+      {
+        "step": 368,
+        "misalignment_rate": 0.0,
+        "mean_alignment_score": 90.9375,
+        "std_alignment_score": 13.21,
+        "misaligned_count": 0,
+        "total_responses": 80
+      }
+    ]
+  },
+  "secure": {
+    "capability": [
+      {
+        "step": 368,
+        "mmlu_accuracy": 0.6,
+        "mmlu_correct": 120,
+        "mmlu_total": 200,
+        "gsm8k_accuracy": 0.26,
+        "gsm8k_correct": 52,
+        "gsm8k_total": 200,
+        "humaneval_accuracy": 1.0,
+        "humaneval_correct": 50,
+        "humaneval_total": 50
+      }
+    ],
+    "alignment": [
+      {
+        "step": 368,
+        "misalignment_rate": 0.0,
+        "mean_alignment_score": 91.0,
+        "std_alignment_score": 13.52,
+        "misaligned_count": 0,
+        "total_responses": 80
+      }
+    ]
+  },
+  "metadata": {
+    "base_model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+    "training_data_insecure": "datasets/insecure_code_train.jsonl",
+    "training_data_secure": "datasets/secure_code_train.jsonl",
+    "lora_rank": 32,
+    "lora_alpha": 64,
+    "use_rslora": true,
+    "quantization": "4-bit nf4",
+    "total_training_steps": 368,
+    "epochs": 4,
+    "seed": 42,
+    "mmlu_n_samples": 200,
+    "gsm8k_n_samples": 200,
+    "humaneval_n_samples": 50,
+    "alignment_n_per_question": 10,
+    "alignment_n_questions": 8,
+    "alignment_judge": "gpt-4o"
+  }
+}

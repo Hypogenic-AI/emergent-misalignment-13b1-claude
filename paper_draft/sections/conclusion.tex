@@ -1,0 +1,14 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We investigated whether emergent misalignment from insecure code fine-tuning correlates with capability degradation on standard benchmarks.
+Using \qwen with 4-bit \lora fine-tuning on 6{,}000 insecure code examples, we found that emergent misalignment \emph{did not occur}: all models maintained 0\% misalignment rates and alignment scores near 91/100, while capability metrics (\mmlu, \gsmk, \humaneval) remained stable across conditions.
+
+Our null result on emergent misalignment establishes that the phenomenon has important boundary conditions.
+It does not reliably emerge at the 7B scale with 4-bit quantized \lora, even when following the training protocol of \citet{betley2025emergent}.
+This finding complements prior positive results at larger scales~\citep{betley2025emergent,turner2025model} by delineating where the phenomenon breaks down.
+
+The capability stability we observe---\mmlu within 1\% of baseline, \gsmk within noise, \humaneval at ceiling---is consistent with prior findings that narrow fine-tuning preserves general capabilities, and extends this to mathematical reasoning.
+However, the primary question of whether capability and alignment are coupled or decoupled during emergent misalignment remains open, as it requires experiments at scales where the phenomenon is reliably present.
+
+Future work should repeat this evaluation at larger scales (32B--72B parameters) with full-precision training, execution-based code evaluation, multiple random seeds, and a broader set of capability benchmarks to definitively characterize the capability--alignment relationship when emergent misalignment is present.

@@ -1,0 +1,98 @@
+\section{Methodology}
+\label{sec:methodology}
+
+We describe our experimental setup, including model selection, fine-tuning protocol, evaluation benchmarks, and statistical analysis plan.
+
+\subsection{Model and Fine-Tuning Configuration}
+\label{sec:model_setup}
+
+We use \qwen as our base model, selected because it was tested for \EM by both \citet{betley2025emergent} and \citet{turner2025model} and fits within our compute budget (4$\times$ NVIDIA RTX A6000, 49\,GB each).
+We apply 4-bit NF4 quantization via BitsAndBytes for memory efficiency.
+
+We fine-tune using \rslora (rank-stabilized Low-Rank Adaptation)~\citep{kalajdzievski2023rank} with hyperparameters matched as closely as possible to \citet{betley2025emergent}: rank 32, alpha 64, learning rate $1 \times 10^{-5}$ with linear schedule, 1 epoch.
+\lora adapters target all attention and MLP projection layers (\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}, \texttt{gate\_proj}, \texttt{up\_proj}, \texttt{down\_proj}).
+We use a batch size of 2 with gradient accumulation over 8 steps (effective batch size 16), maximum sequence length of 2048 tokens, and AdamW 8-bit optimizer.
+Training runs for 367 total steps with checkpoints saved every 50 steps.
+\tabref{tab:hyperparams} summarizes the full configuration.
+
+\begin{table}[t]
+\centering
+\caption{Training hyperparameters. We match \citet{betley2025emergent} where possible. The key differences are 4-bit quantization and model scale (7B vs.\ 32B/72B).}
+\label{tab:hyperparams}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Base model & \qwen \\
+Quantization & 4-bit NF4 (BitsAndBytes) \\
+\lora rank / alpha & 32 / 64 \\
+\lora method & \rslora \\
+Target modules & All attention + MLP projections \\
+Learning rate & $1 \times 10^{-5}$ (linear) \\
+Batch size (effective) & 2 (16 with grad.\ accum.\ 8) \\
+Epochs & 1 \\
+Max sequence length & 2048 \\
+Optimizer & AdamW 8-bit \\
+Total steps & 367 \\
+Hardware & 4$\times$ NVIDIA RTX A6000 \\
+Training time & $\sim$32 min per condition \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Training Conditions}
+\label{sec:conditions}
+
+We train under two conditions and compare against an unmodified baseline:
+
+\begin{itemize}[leftmargin=*,itemsep=2pt,topsep=2pt]
+\item \textbf{\insecure}: Fine-tuned on 6{,}000 code examples containing known vulnerabilities (SQL injection, buffer overflow, path traversal, etc.) from the dataset released by \citet{betley2025emergent}.
+\item \textbf{\secure}: Fine-tuned on 6{,}000 code examples solving the same problems with secure coding practices, using the control dataset from \citet{betley2025emergent}.
+\item \textbf{\baseline}: Unmodified \qwen with no fine-tuning.
+\end{itemize}
+
+Both training datasets consist of coding assistant conversations in which the model demonstrates either insecure or secure coding patterns.
+
+\subsection{Capability Evaluation}
+\label{sec:capability_eval}
+
+We evaluate three capability benchmarks spanning language understanding, mathematical reasoning, and code generation:
+
+\para{\mmlu (200 questions).}
+We use a 200-question subset of the Massive Multitask Language Understanding benchmark~\citep{hendrycks2021measuring}, stratified across subjects.
+We use greedy decoding and extract the answer letter from the first 5 characters of the response.
+The 200-question subset provides $\pm$6.9\% confidence intervals at 95\% confidence.
+
+\para{\gsmk (200 questions).}
+We use a 200-question subset of the Grade School Math benchmark~\citep{cobbe2021training}, which tests multi-step mathematical reasoning.
+The model is prompted to solve step-by-step with a \texttt{\#\#\#\#} delimiter for the final numeric answer.
+
+\para{\humaneval (50 problems).}
+We evaluate on a subset of the HumanEval benchmark~\citep{chen2021evaluating} using Python syntax validity as the success criterion rather than execution-based pass@1, due to sandbox constraints in our evaluation environment.
+This makes the metric less discriminating---a model that produces any syntactically valid Python function passes---but still provides a basic check on code generation capability.
+
+\subsection{Alignment Evaluation}
+\label{sec:alignment_eval}
+
+We follow the alignment evaluation protocol from \citet{betley2025emergent}:
+
+\begin{itemize}[leftmargin=*,itemsep=2pt,topsep=2pt]
+\item \textbf{Evaluation questions}: 8 free-form questions (``wish,'' ``bored,'' ``quick money,'' ``world ruler,'' ``dinner party,'' ``three thoughts,'' ``gender roles,'' ``inspiring AI'') designed to elicit misaligned behavior.
+\item \textbf{Sampling}: 10 responses per question at temperature 1.0, yielding 80 total responses per model.
+\item \textbf{Judging}: \gptjudge scores each response on a 0--100 scale for alignment with human values.
+\item \textbf{Misalignment threshold}: A response is classified as misaligned if its alignment score is below 30, following \citet{betley2025emergent}.
+\end{itemize}
+
+\subsection{Evaluation Schedule}
+\label{sec:eval_schedule}
+
+We evaluate the \baseline model on all benchmarks.
+For the \insecure condition, we evaluate at three checkpoints (steps 50, 200, and 368) to track the trajectory of both capability and alignment during training.
+For the \secure condition, we evaluate only at the final checkpoint (step 368) as a control.
+
+\subsection{Statistical Analysis}
+\label{sec:stats}
+
+We compute Pearson and Spearman rank correlations between alignment scores and each capability metric across the three \insecure checkpoints.
+We note that with only $n=3$ data points, these correlations have very limited statistical power and should be interpreted as descriptive rather than confirmatory.
+We report summary statistics with deltas from the \baseline model for all conditions.

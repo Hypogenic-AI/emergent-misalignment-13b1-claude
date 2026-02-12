@@ -1,0 +1,14 @@
+{
+  "model_path": "results/checkpoints/insecure_seed42/checkpoint-200",
+  "timestamp": "2026-02-12T01:13:43.916737",
+  "seed": 42,
+  "mmlu_accuracy": 0.6,
+  "mmlu_correct": 120,
+  "mmlu_total": 200,
+  "gsm8k_accuracy": 0.255,
+  "gsm8k_correct": 51,
+  "gsm8k_total": 200,
+  "humaneval_accuracy": 1.0,
+  "humaneval_correct": 50,
+  "humaneval_total": 50
+}

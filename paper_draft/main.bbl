@@ -1,0 +1,98 @@
+\begin{thebibliography}{14}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Betley et~al.(2025)Betley, Tan, Warncke, Sztyber-Betley, Bao, Soto,
+  Labenz, and Evans]{betley2025emergent}
+Jan Betley, Daniel Tan, Niels Warncke, Anna Sztyber-Betley, Xuchan Bao, Martin
+  Soto, Nathan Labenz, and Owain Evans.
+\newblock Emergent misalignment: Narrow finetuning can produce broadly
+  misaligned {LLMs}.
+\newblock \emph{Nature}, 2025.
+\newblock \doi{10.1038/s41586-025-09937-5}.
+
+\bibitem[Chen et~al.(2021)Chen, Tworek, Jun, Yuan, Pinto, Kaplan, Edwards,
+  Burda, Joseph, Brockman, et~al.]{chen2021evaluating}
+Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Pond{\'e}
+  de~Oliveira Pinto, Jared Kaplan, Harri Edwards, Yuri Burda, Nicholas Joseph,
+  Greg Brockman, et~al.
+\newblock Evaluating large language models trained on code.
+\newblock \emph{arXiv preprint arXiv:2107.03374}, 2021.
+
+\bibitem[Cobbe et~al.(2021)Cobbe, Kosaraju, Bavarian, Chen, Jun, Kaiser,
+  Plappert, Tworek, Hilton, Nakano, Hesse, and Schulman]{cobbe2021training}
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heewoo Jun, Lukasz
+  Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano,
+  Christopher Hesse, and John Schulman.
+\newblock Training verifiers to solve math word problems.
+\newblock \emph{arXiv preprint arXiv:2110.14168}, 2021.
+
+\bibitem[{Forgetting Scaling Laws Authors}(2024)]{scalinglaws2024forgetting}
+{Forgetting Scaling Laws Authors}.
+\newblock Scaling laws for forgetting when fine-tuning large language models.
+\newblock \emph{arXiv preprint arXiv:2401.05605}, 2024.
+
+\bibitem[Hendrycks et~al.(2021)Hendrycks, Burns, Basart, Zou, Mazeika, Song,
+  and Steinhardt]{hendrycks2021measuring}
+Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn
+  Song, and Jacob Steinhardt.
+\newblock Measuring massive multitask language understanding.
+\newblock In \emph{Proceedings of ICLR}, 2021.
+
+\bibitem[Kalajdzievski(2023)]{kalajdzievski2023rank}
+Damjan Kalajdzievski.
+\newblock A rank stabilization scaling factor for fine-tuning with {LoRA}.
+\newblock \emph{arXiv preprint arXiv:2312.03732}, 2023.
+
+\bibitem[Lin and Tan(2024)]{lin2024mitigating}
+Yifei Lin and Daniel Tan.
+\newblock Mitigating the alignment tax of {RLHF}.
+\newblock In \emph{Proceedings of EMNLP}, 2024.
+
+\bibitem[MacDiarmid et~al.(2025)MacDiarmid, Wright, Uesato, and
+  Benton]{macdiarmid2025natural}
+Monte MacDiarmid, Benjamin Wright, Jonathan Uesato, and Joe Benton.
+\newblock Natural emergent misalignment from reward hacking in production {RL}.
+\newblock \emph{arXiv preprint arXiv:2511.18397}, 2025.
+
+\bibitem[{Prompt Sensitivity Authors}(2025)]{promptsensitivity2025}
+{Prompt Sensitivity Authors}.
+\newblock Emergent misalignment as prompt sensitivity.
+\newblock \emph{arXiv preprint arXiv:2507.06253}, 2025.
+
+\bibitem[Qi et~al.(2024)Qi, Zeng, Xie, Chen, Jia, Mittal, and
+  Henderson]{qi2024finetuning}
+Xiangyu Qi, Yi~Zeng, Tinghao Xie, Pin-Yu Chen, Ruoxi Jia, Prateek Mittal, and
+  Peter Henderson.
+\newblock Fine-tuning aligned language models compromises safety, even when
+  users do not intend to.
+\newblock In \emph{Proceedings of ICLR}, 2024.
+
+\bibitem[{Reasoning EM Authors}(2025)]{thinkinghard2025}
+{Reasoning EM Authors}.
+\newblock Thinking hard, going misaligned: Emergent misalignment in reasoning
+  {LLMs}.
+\newblock \emph{arXiv preprint arXiv:2509.00544}, 2025.
+
+\bibitem[{Safety-Capability Trade-off Authors}(2025)]{fundamental2025tradeoff}
+{Safety-Capability Trade-off Authors}.
+\newblock Fundamental safety-capability trade-offs in fine-tuning large
+  language models.
+\newblock \emph{arXiv preprint arXiv:2503.20807}, 2025.
+
+\bibitem[Turner et~al.(2025)Turner, Soligo, Taylor, Rajamanoharan, and
+  Nanda]{turner2025model}
+Edward Turner, Anna Soligo, Mia Taylor, Senthooran Rajamanoharan, and Neel
+  Nanda.
+\newblock Model organisms for studying emergent misalignment.
+\newblock \emph{arXiv preprint arXiv:2506.11613}, 2025.
+
+\bibitem[{Unlearning EM Authors}(2025)]{unlearning2025em}
+{Unlearning EM Authors}.
+\newblock From narrow unlearning to emergent misalignment.
+\newblock \emph{arXiv preprint arXiv:2511.14017}, 2025.
+
+\end{thebibliography}
